@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ../backend
+    container_name: splitup-backend
+    env_file:
+        - ../backend/.env
+    volumes:
+        - ../backend:/app
+        - /app/node_modules
+    ports:
+        - "3000:3000"
+        - "9229:9229"
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ../frontend
+    container_name: splitup-frontend
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    command: npm run dev -- --host
