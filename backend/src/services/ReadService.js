@@ -1,43 +1,67 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
-const anthropic = new Anthropic();
+const client = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
-const PROMPT = `Você é um extrator de dados de recibos de restaurante.
+const PROMPT = `
+Você é um extrator de dados de recibos de restaurante.
 Analise o documento e extraia todos os itens consumidos.
 Responda APENAS com JSON puro, sem markdown nem texto extra.
-Formato: {"itens":[{"nome":"Nome do item","quantidade":1,"preco":12.50}]}
-- quantidade: inteiro (padrão 1 se não informado)
-- preco: valor unitário em reais (float)
-Sem comentários, sem campos extras.`;
+Formato:
+  {
+    "itens":
+      [
+        {
+          "nome":"Nome do item",
+          "quantidade":1,
+          "preco":12.50
+        },
+        ...
+      ]
+  }
+- nome: string
+- quantidade: inteiro
+- preco: valor unitário em reais
+`;
 
 export class ReadService {
   static async readReceipt(req) {
     const file = req.file;
 
-    if (!file) throw new Error("Arquivo não enviado.");
+    if (!file) {
+      throw new Error("Arquivo não enviado.");
+    }
 
-    const base64    = file.buffer.toString("base64");
-    const isPdf     = file.mimetype === "application/pdf";
-    const mediaType = isPdf ? "application/pdf" : (file.mimetype || "image/jpeg");
+    const base64 = file.buffer.toString("base64");
 
-    const conteudo = isPdf
-      ? [
-          { type: "document", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: PROMPT },
-        ]
-      : [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: PROMPT },
-        ];
-
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: conteudo }],
+    const response = await client.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: PROMPT,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${file.mimetype};base64,${base64}`,
+              },
+            },
+          ],
+        },
+      ],
+      temperature: 0,
     });
 
-    const texto  = msg.content.map((b) => b.text ?? "").join("");
-    const limpo  = texto.replace(/```json|```/g, "").trim();
+    const texto = response.choices[0].message.content;
+
+    const limpo = texto.replace(/```json|```/g, "").trim();
+
     const parsed = JSON.parse(limpo);
 
     return parsed.itens ?? [];

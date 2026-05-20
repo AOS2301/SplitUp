@@ -7,6 +7,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
-router.post("/read/receipt", upload.single("arquivo"), ReadController.readReceipt);
+router.post("/receipt", upload.single("arquivo"), ReadController.readReceipt);
 
 export default router;
