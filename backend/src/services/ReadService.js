@@ -11,15 +11,9 @@ Analise o documento e extraia todos os itens consumidos.
 Responda APENAS com JSON puro, sem markdown nem texto extra.
 Formato:
   {
-    "itens":
-      [
-        {
-          "nome":"Nome do item",
-          "quantidade":1,
-          "preco":12.50
-        },
-        ...
-      ]
+    "itens": [
+      { "nome": "Nome do item", "quantidade": 1, "preco": 12.50 }
+    ]
   }
 - nome: string
 - quantidade: inteiro
@@ -29,28 +23,21 @@ Formato:
 export class ReadService {
   static async readReceipt(req) {
     const file = req.file;
-
-    if (!file) {
-      throw new Error("Arquivo não enviado.");
-    }
+    
+    if (!file) throw new Error("Arquivo não enviado. (Dentro do service)");
 
     const base64 = file.buffer.toString("base64");
 
     const response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       messages: [
         {
           role: "user",
           content: [
-            {
-              type: "text",
-              text: PROMPT,
-            },
+            { type: "text", text: PROMPT },
             {
               type: "image_url",
-              image_url: {
-                url: `data:${file.mimetype};base64,${base64}`,
-              },
+              image_url: { url: `data:${file.mimetype};base64,${base64}` },
             },
           ],
         },
@@ -59,9 +46,7 @@ export class ReadService {
     });
 
     const texto = response.choices[0].message.content;
-
     const limpo = texto.replace(/```json|```/g, "").trim();
-
     const parsed = JSON.parse(limpo);
 
     return parsed.itens ?? [];

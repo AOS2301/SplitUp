@@ -3,6 +3,9 @@ import { ref, reactive, computed } from 'vue'
 import '../assets/css/home.css'
 
 // ── Estado ───────────────────────────────────────────────────
+
+const API_URL = import.meta.env.VITE_API_URL;
+
 const etapa        = ref('upload')   // 'upload' | 'itens' | 'resumo'
 const lendo        = ref(false)
 const erro         = ref('')
@@ -50,13 +53,22 @@ async function lerRecibo() {
     const form = new FormData()
     form.append('arquivo', arquivo.value)
 
-    const res = await fetch('/read/receipt',
+    const res = await fetch(`${API_URL}/read/receipt`,
       {
         method: 'POST'
         , body: form
       }
     )
-    const data = await res.json()
+    const text = await res.text()
+
+    if (!text) throw new Error('Servidor retornou resposta vazia')
+
+    let data
+    try {
+      data = JSON.parse(text)
+    } catch {
+      throw new Error(`Resposta inválida do servidor: ${text.slice(0, 100)}`)
+    }
 
     if (!res.ok) throw new Error(data.erro || 'Erro desconhecido')
 

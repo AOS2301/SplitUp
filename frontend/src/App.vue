@@ -44,7 +44,7 @@ function logout() {
               class="avatar-btn"
               @click="toggleMenu"
             >
-              PH
+              PH/AS
             </button>
 
             <div
