@@ -1,4 +1,5 @@
 <script setup>
+import navBar from '../components/navBar.vue'
 import { ref, reactive, computed } from 'vue'
 import '../assets/css/home.css'
 
@@ -146,6 +147,7 @@ function novaImportacao() {
 <template>
   <div class="home-container">
     <main class="content">
+    <navBar></navBar>
       <header class="header">
         <h2>Dividir <span>Conta</span></h2>
         <p>Envie o recibo do restaurante para dividir automaticamente entre as pessoas</p>

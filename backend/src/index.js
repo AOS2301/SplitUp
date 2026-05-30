@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import healthRoutes from "./routes/healthCheck.routes.js";
 import readRoutes from "./routes/read.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(cors({
 // Rotas
 app.use("/api", healthRoutes);
 app.use("/read", readRoutes);
+app.use("/auth", authRoutes);
 
 // Rota de teste
 app.get("/api", (req, res) => {
