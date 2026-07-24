@@ -1,6 +1,6 @@
-import jwt from "jsonwebtoken";
+import { supabase, supabaseComToken } from "../lib/supabase.js";
 
-export function authGuard(req, res, next) {
+export async function authGuard(req, res, next) {
   const authHeader = req.headers.authorization;
 
   // 1. Existe token?
@@ -9,18 +9,23 @@ export function authGuard(req, res, next) {
   }
 
   // 2. Extrai o token
-  const [, token] = authHeader.split(" ");
+  const [esquema, token] = authHeader.split(" ");
 
-  try {
-    // 3. Valida token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  if (esquema !== "Bearer" || !token) {
+    return res.status(401).json({ error: "Token mal formatado" });
+  }
 
-    // 4. Injeta usuário na request
-    req.user = decoded;
+  // 3. Valida o token no Supabase
+  const { data, error } = await supabase.auth.getUser(token);
 
-    // 5. Libera acesso
-    next();
-  } catch {
+  if (error || !data?.user) {
     return res.status(401).json({ error: "Token inválido ou expirado" });
   }
+
+  // 4. Injeta o usuário e um client já escopado nele (respeita RLS)
+  req.user = data.user;
+  req.supabase = supabaseComToken(token);
+
+  // 5. Libera acesso
+  next();
 }

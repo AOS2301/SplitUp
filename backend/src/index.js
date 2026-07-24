@@ -15,6 +15,8 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(express.json());
+
 // Rotas
 app.use("/api", healthRoutes);
 app.use("/read", readRoutes);

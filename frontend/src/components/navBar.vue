@@ -1,21 +1,54 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '../lib/supabase'
 import "../assets/css/navBar.css";
 
+const router = useRouter()
 const menuAberto = ref(false)
-const logado = ref(false)
+const usuario = ref(null)
+
+const logado = computed(() => usuario.value !== null)
+
+const nome = computed(() =>
+  usuario.value?.user_metadata?.nome || usuario.value?.email || ''
+)
+
+// "Pedro Henrique" -> "PH"; "pedro@email.com" -> "PE"
+const iniciais = computed(() => {
+  const partes = nome.value.trim().split(/\s+/).filter(Boolean)
+  if (!partes.length) return '?'
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+})
+
+let assinatura = null
+
+onMounted(async () => {
+  const { data } = await supabase.auth.getSession()
+  usuario.value = data.session?.user ?? null
+
+  // Mantém a navbar em sincronia com login/logout/refresh de token.
+  const { data: listener } = supabase.auth.onAuthStateChange((_evento, sessao) => {
+    usuario.value = sessao?.user ?? null
+  })
+  assinatura = listener.subscription
+})
+
+onUnmounted(() => assinatura?.unsubscribe())
 
 function toggleMenu() {
   menuAberto.value = !menuAberto.value
 }
 
 function login() {
-  logado.value = true
+  router.push('/login')
 }
 
-function logout() {
-  logado.value = false
+async function logout() {
   menuAberto.value = false
+  await supabase.auth.signOut()
+  router.push('/login')
 }
 </script>
 <template>
@@ -42,9 +75,10 @@ function logout() {
           >
             <button
               class="avatar-btn"
+              :title="nome"
               @click="toggleMenu"
             >
-              PH/AS
+              {{ iniciais }}
             </button>
 
             <div

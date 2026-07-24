@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { supabase } from "../lib/supabase";
 import "../assets/css/auth.css";
 
 const email = ref("");
@@ -8,40 +9,32 @@ const senha = ref("");
 const errorMsg = ref("");
 const router = useRouter();
 const loading = ref(false);
-const API_URL = import.meta.env.VITE_API_URL;
-
-addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    login();
-  }
-});
 
 async function login() {
+  if (loading.value) return;
+
   loading.value = true;
   errorMsg.value = "";
+
   try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email.value,
-        senha: senha.value,
-      }),
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: senha.value,
     });
-    const data = await response.json();
-    if (!response.ok) {
-      errorMsg.value = "Credenciais inválidas";
-      email.value = "";
+
+    if (error) {
+      errorMsg.value =
+        error.message === "Email not confirmed"
+          ? "Confirme seu e-mail antes de entrar"
+          : "Credenciais inválidas";
       senha.value = "";
       return;
     }
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("nome", data.user.nome);
+
+    // A sessão fica guardada pelo supabase-js; não precisa mexer no localStorage.
+    router.push("/");
   } catch (error) {
     errorMsg.value = error.message || "Erro ao fazer login";
-    statusMsg.value = "";
   } finally {
     loading.value = false;
   }
@@ -73,6 +66,7 @@ async function login() {
               type="email"
               placeholder="seu@email.com"
               v-model="email"
+              @keyup.enter="login"
             />
           </div>
 
@@ -83,6 +77,7 @@ async function login() {
               type="password"
               placeholder="••••••••"
               v-model="senha"
+              @keyup.enter="login"
             />
           </div>
         </div>

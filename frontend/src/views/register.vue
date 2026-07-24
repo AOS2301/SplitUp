@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { supabase } from "../lib/supabase";
 import "../assets/css/auth.css";
 
 const nome = ref("");
@@ -11,15 +12,10 @@ const errorMsg = ref("");
 const successMsg = ref("");
 const loading = ref(false);
 const router = useRouter();
-const API_URL = import.meta.env.VITE_API_URL;
-
-addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    register();
-  }
-});
 
 async function register() {
+  if (loading.value) return;
+
   errorMsg.value = "";
   successMsg.value = "";
 
@@ -42,29 +38,29 @@ async function register() {
   loading.value = true;
 
   try {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    // O nome vai no metadata; a trigger on_auth_user_created usa ele para
+    // criar a linha em public.profiles.
+    const { data, error } = await supabase.auth.signUp({
+      email: email.value,
+      password: senha.value,
+      options: {
+        data: { nome: nome.value },
       },
-      body: JSON.stringify({
-        nome: nome.value,
-        email: email.value,
-        senha: senha.value,
-      }),
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      errorMsg.value = data.message || "Erro ao criar conta";
+    if (error) {
+      errorMsg.value = error.message || "Erro ao criar conta";
       return;
     }
 
-    successMsg.value = "Conta criada com sucesso!";
-    setTimeout(() => {
-      router.push("/login");
-    }, 1500);
+    // Com confirmação de e-mail ligada no Supabase, o signUp não devolve sessão.
+    if (data.session) {
+      successMsg.value = "Conta criada com sucesso!";
+      setTimeout(() => router.push("/"), 1000);
+    } else {
+      successMsg.value = "Conta criada! Confirme o e-mail para entrar.";
+      setTimeout(() => router.push("/login"), 2500);
+    }
   } catch (error) {
     errorMsg.value = error.message || "Erro ao criar conta";
   } finally {
@@ -129,6 +125,7 @@ async function register() {
               type="password"
               placeholder="••••••••"
               v-model="confirmarSenha"
+              @keyup.enter="register"
             />
           </div>
         </div>
